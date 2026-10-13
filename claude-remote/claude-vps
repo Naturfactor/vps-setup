@@ -21,7 +21,9 @@ PROJ=$HOME_U/projects
 
 [ "$(id -u)" = 0 ] || { echo "Bitte als root ausfuehren."; exit 1; }
 
-als_claude() { sudo -iu "$U" "$@"; }
+# Nicht "sudo -i": Die Login-Shell verschluckt leere Argumente (ssh-keygen -N "").
+# Das cd laeuft als root, weil /root fuer claude nicht lesbar ist.
+als_claude() { (cd "$HOME_U" && sudo -u "$U" -H "$@"); }
 
 name_pruefen() {
   [[ "${1:-}" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "Name: nur a-z, 0-9 und -"; exit 1; }
