@@ -43,6 +43,8 @@ echo "→ Claude Code"
 if ! sudo -iu "$U" bash -lc 'command -v claude' >/dev/null; then
   sudo -iu "$U" bash -c 'curl -fsSL https://claude.ai/install.sh | bash'
 fi
+# Installer legt claude nach ~/.local/bin – auch fuer nicht-Login-Shells (tmux) in den PATH.
+sudo -iu "$U" bash -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 sudo -iu "$U" bash -lc 'claude --version'
 
 echo "→ Sperrliste /etc/claude-code/managed-settings.json"
