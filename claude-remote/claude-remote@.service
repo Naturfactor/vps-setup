@@ -1,0 +1,47 @@
+# /etc/systemd/system/claude-remote@.service
+#
+# Claude Code Remote Control fuer ein Projekt unter /home/claude/projects/<name>.
+# Eine Instanz pro Projekt, z. B. claude-remote@oneworld.
+#
+#   systemctl enable --now claude-remote@oneworld
+#   journalctl -u claude-remote@oneworld -f
+#   sudo -iu claude tmux attach -t claude-oneworld     (Ctrl+b, d zum Abkoppeln)
+#
+# Bequemer ueber den Befehl claude-vps (claude-remote/claude-vps).
+#
+[Unit]
+Description=Claude Code Remote Control (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+# Eigener Benutzer ohne sudo: Claude kommt weder an /root noch an die .env
+# der anderen Dienste.
+User=claude
+Group=claude
+WorkingDirectory=/home/claude/projects/%i
+Environment=PATH=/home/claude/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/home/claude
+
+# tmux haelt die Sitzung, damit man sich per SSH einklinken kann. Die Schleife
+# startet Claude neu, falls es sich beendet – tmux selbst laeuft weiter, darum
+# wuerde Restart= allein dann nicht greifen.
+ExecStart=/usr/bin/tmux new-session -d -s claude-%i \
+  "while true; do claude remote-control; echo '[claude beendet, Neustart in 10 s]'; sleep 10; done"
+ExecStop=/usr/bin/tmux kill-session -t claude-%i
+Restart=always
+RestartSec=10
+
+# Schreiben nur im eigenen Home. /root, /etc, /usr, /var/www sind nur lesbar
+# bzw. durch Dateirechte ohnehin gesperrt.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/claude /tmp /var/tmp
+# Kein PrivateTmp: Der tmux-Socket liegt in /tmp und muss fuer
+# "tmux attach" aus einer normalen SSH-Sitzung sichtbar bleiben.
+# /tmp muss trotz ProtectSystem=strict beschreibbar sein (Socket, Build-Tools).
+
+[Install]
+WantedBy=multi-user.target

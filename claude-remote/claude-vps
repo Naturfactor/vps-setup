@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# ============================================================================
+#  claude-vps – Claude Code Remote Control auf dem VPS verwalten.
+#  Liegt nach claude-remote/setup.sh unter /usr/local/bin/claude-vps.
+#  Als root ausfuehren.
+#
+#    claude-vps login                    einmalig: Claude-Account anmelden
+#    claude-vps add <name> <git-url>     Projekt anlegen (eigener Deploy-Key)
+#    claude-vps start <name>             starten + beim Booten automatisch
+#    claude-vps stop <name>              stoppen + Autostart aus
+#    claude-vps restart <name>
+#    claude-vps attach <name>            in die Sitzung schauen (Ctrl+b, d raus)
+#    claude-vps status                   alle Projekte
+#    claude-vps logs <name>
+# ============================================================================
+set -euo pipefail
+
+U=claude
+HOME_U=/home/$U
+PROJ=$HOME_U/projects
+
+[ "$(id -u)" = 0 ] || { echo "Bitte als root ausfuehren."; exit 1; }
+
+als_claude() { sudo -iu "$U" "$@"; }
+
+name_pruefen() {
+  [[ "${1:-}" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "Name: nur a-z, 0-9 und -"; exit 1; }
+}
+
+cmd="${1:-status}"; shift || true
+
+case "$cmd" in
+  login)
+    echo "→ Claude startet als Benutzer '$U'. Mit /login anmelden, danach /exit."
+    als_claude bash -lc "cd ~ && claude"
+    ;;
+
+  add)
+    name="${1:-}"; url="${2:-}"
+    name_pruefen "$name"
+    [ -n "$url" ] || { echo "Aufruf: claude-vps add <name> git@github.com:<owner>/<repo>.git"; exit 1; }
+    [ -e "$PROJ/$name" ] && { echo "$PROJ/$name gibt es schon."; exit 1; }
+
+    # GitHub erlaubt einen Deploy-Key nur fuer ein Repo – darum einer pro Projekt,
+    # angesprochen ueber einen eigenen Host-Alias.
+    key="$HOME_U/.ssh/deploy-$name"
+    if [ ! -f "$key" ]; then
+      als_claude ssh-keygen -t ed25519 -N "" -C "claude@$(hostname)-$name" -f "$key" >/dev/null
+      als_claude bash -c "cat >> ~/.ssh/config" <<EOF
+
+Host github-$name
+  HostName github.com
+  User git
+  IdentityFile $key
+  IdentitiesOnly yes
+EOF
+    fi
+    alias_url=$(echo "$url" | sed -E "s#^git@github\.com:#git@github-$name:#; s#^https://github\.com/#git@github-$name:#")
+
+    echo
+    echo "→ Diesen Schluessel bei GitHub hinterlegen:"
+    echo "  Repo → Settings → Deploy keys → Add deploy key"
+    echo "  Titel: claude@$(hostname)   [x] Allow write access"
+    echo
+    cat "$key.pub"
+    echo
+    read -rp "Hinterlegt? Enter zum Klonen … "
+
+    als_claude git clone "$alias_url" "$PROJ/$name"
+    echo "✓ $PROJ/$name"
+    echo "  Weiter: claude-vps start $name   und einmal   claude-vps attach $name"
+    ;;
+
+  start)
+    name_pruefen "${1:-}"
+    [ -d "$PROJ/$1" ] || { echo "Kein Projekt $PROJ/$1 – erst claude-vps add."; exit 1; }
+    systemctl enable --now "claude-remote@$1"
+    echo "✓ laeuft. Beim ersten Start einmal hineinschauen: claude-vps attach $1"
+    ;;
+
+  stop)
+    name_pruefen "${1:-}"
+    systemctl disable --now "claude-remote@$1"
+    ;;
+
+  restart)
+    name_pruefen "${1:-}"
+    systemctl restart "claude-remote@$1"
+    ;;
+
+  attach)
+    name_pruefen "${1:-}"
+    als_claude tmux attach -t "claude-$1"
+    ;;
+
+  logs)
+    name_pruefen "${1:-}"
+    journalctl -u "claude-remote@$1" -n 50 --no-pager
+    ;;
+
+  status)
+    systemctl list-units --all --no-pager 'claude-remote@*' || true
+    echo
+    echo "Projekte in $PROJ:"
+    ls -1 "$PROJ" 2>/dev/null | sed 's/^/  /' || echo "  (keine)"
+    ;;
+
+  *)
+    sed -n '3,15p' "$0"; exit 1 ;;
+esac
