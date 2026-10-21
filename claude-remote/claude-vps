@@ -6,12 +6,15 @@
 #
 #    claude-vps login                    einmalig: Claude-Account anmelden
 #    claude-vps add <name> <git-url>     Projekt anlegen (eigener Deploy-Key)
-#    claude-vps start <name>             starten + beim Booten automatisch
-#    claude-vps stop <name>              stoppen + Autostart aus
-#    claude-vps restart <name>
-#    claude-vps attach <name>            in die Sitzung schauen (Ctrl+b, d raus)
+#    claude-vps start [<name>]           starten + beim Booten automatisch
+#    claude-vps stop [<name>]            stoppen + Autostart aus
+#    claude-vps restart [<name>]
+#    claude-vps attach [<name>]          in die Sitzung schauen (Ctrl+b, d raus)
 #    claude-vps status                   alle Projekte
-#    claude-vps logs <name>
+#    claude-vps logs [<name>]
+#
+#  Ohne <name> (oder mit "alle"): eine Sitzung fuer ALLE Projekte im Ordner
+#  ~/projects – das ist der Normalfall. Mit <name> nur dieses eine Projekt.
 # ============================================================================
 set -euo pipefail
 
@@ -29,6 +32,16 @@ name_pruefen() {
   [[ "${1:-}" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "Name: nur a-z, 0-9 und -"; exit 1; }
 }
 
+# "alle" bzw. kein Name → claude-remote.service (Ordner ~/projects),
+# sonst claude-remote@<name>.service. Setzt UNIT und SITZUNG.
+ziel() {
+  local n="${1:-alle}"
+  if [ "$n" = alle ]; then UNIT=claude-remote; SITZUNG=claude-alle; return; fi
+  name_pruefen "$n"
+  [ -d "$PROJ/$n" ] || { echo "Kein Projekt $PROJ/$n – erst claude-vps add."; exit 1; }
+  UNIT="claude-remote@$n"; SITZUNG="claude-$n"
+}
+
 cmd="${1:-status}"; shift || true
 
 case "$cmd" in
@@ -40,6 +53,7 @@ case "$cmd" in
   add)
     name="${1:-}"; url="${2:-}"
     name_pruefen "$name"
+    [ "$name" = alle ] && { echo "\"alle\" ist reserviert."; exit 1; }
     [ -n "$url" ] || { echo "Aufruf: claude-vps add <name> git@github.com:<owner>/<repo>.git"; exit 1; }
     [ -e "$PROJ/$name" ] && { echo "$PROJ/$name gibt es schon."; exit 1; }
 
@@ -70,43 +84,42 @@ EOF
 
     als_claude git clone "$alias_url" "$PROJ/$name"
     echo "✓ $PROJ/$name"
-    echo "  Weiter: claude-vps start $name   und einmal   claude-vps attach $name"
+    echo "  Laeuft 'claude-vps start' (alle Projekte), ist es dort sofort verfuegbar."
     ;;
 
   start)
-    name_pruefen "${1:-}"
-    [ -d "$PROJ/$1" ] || { echo "Kein Projekt $PROJ/$1 – erst claude-vps add."; exit 1; }
-    systemctl enable --now "claude-remote@$1"
-    echo "✓ laeuft. Beim ersten Start einmal hineinschauen: claude-vps attach $1"
+    ziel "${1:-}"
+    systemctl enable --now "$UNIT"
+    echo "✓ laeuft. Beim ersten Start einmal hineinschauen: claude-vps attach ${1:-}"
     ;;
 
   stop)
-    name_pruefen "${1:-}"
-    systemctl disable --now "claude-remote@$1"
+    ziel "${1:-}"
+    systemctl disable --now "$UNIT"
     ;;
 
   restart)
-    name_pruefen "${1:-}"
-    systemctl restart "claude-remote@$1"
+    ziel "${1:-}"
+    systemctl restart "$UNIT"
     ;;
 
   attach)
-    name_pruefen "${1:-}"
-    als_claude tmux attach -t "claude-$1"
+    ziel "${1:-}"
+    als_claude tmux attach -t "$SITZUNG"
     ;;
 
   logs)
-    name_pruefen "${1:-}"
-    journalctl -u "claude-remote@$1" -n 50 --no-pager
+    ziel "${1:-}"
+    journalctl -u "$UNIT" -n 50 --no-pager
     ;;
 
   status)
-    systemctl list-units --all --no-pager 'claude-remote@*' || true
+    systemctl list-units --all --no-pager 'claude-remote.service' 'claude-remote@*' || true
     echo
     echo "Projekte in $PROJ:"
     ls -1 "$PROJ" 2>/dev/null | sed 's/^/  /' || echo "  (keine)"
     ;;
 
   *)
-    sed -n '3,15p' "$0"; exit 1 ;;
+    sed -n '3,18p' "$0"; exit 1 ;;
 esac

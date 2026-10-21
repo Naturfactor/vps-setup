@@ -10,7 +10,8 @@ Am Server wird kein Port geöffnet: Die Verbindung geht vom VPS aus zu Anthropic
 |---|---|
 | Benutzer | `claude`, ohne Passwort, ohne sudo |
 | Projekte | `/home/claude/projects/<name>/` (eigene Git-Klone) |
-| Dienst | `claude-remote@<name>.service` → tmux-Sitzung `claude-<name>` |
+| Dienst (Normalfall) | `claude-remote.service` → tmux-Sitzung `claude-alle`, Arbeitsordner `/home/claude/projects` – eine Sitzung für alle Projekte |
+| Dienst (einzeln, optional) | `claude-remote@<name>.service` → tmux-Sitzung `claude-<name>` |
 | Sperrliste | `/etc/claude-code/managed-settings.json` (root-eigen, Quelle `claude-remote/claude-managed-settings.json`) |
 | Verwaltung | `/usr/local/bin/claude-vps` (Quelle `claude-remote/claude-vps`) |
 | GitHub | ein Deploy-Key pro Projekt, Host-Alias `github-<name>` in `~claude/.ssh/config` |
@@ -25,8 +26,8 @@ claude-vps login          # Claude startet, /login, Account bestätigen, /exit
 claude-vps add oneworld git@github.com:Naturfactor/oneworld-fund.git
                           # zeigt einen Schlüssel → GitHub: Repo → Settings →
                           # Deploy keys → Add, "Allow write access" an → Enter
-claude-vps start oneworld
-claude-vps attach oneworld   # beim ersten Mal Rückfragen bestätigen, Ctrl+b d
+claude-vps start            # eine Sitzung für alle Projekte
+claude-vps attach           # beim ersten Mal Rückfragen bestätigen, Ctrl+b d
 ```
 
 Dann in der Claude-App unter **Code** die Sitzung öffnen.
@@ -35,11 +36,16 @@ Dann in der Claude-App unter **Code** die Sitzung öffnen.
 
 ```bash
 claude-vps status
-claude-vps restart oneworld
-claude-vps logs oneworld
-claude-vps attach oneworld
-claude-vps stop oneworld
+claude-vps restart
+claude-vps logs
+claude-vps attach
+claude-vps stop
 ```
+
+Weitere Projekte: `claude-vps add <name> <git-url>` – sie liegen danach in
+`~/projects/<name>` und sind in der laufenden Sitzung sofort erreichbar. In
+der App einfach sagen, in welchem Projekt gearbeitet wird („im Projekt
+oneworld …“). Ein Projekt mit eigener Sitzung: `claude-vps start <name>`.
 
 Vom iPhone aus geht das mit einer SSH-App (Termius, Blink Shell).
 Nach einem Neustart des VPS startet alles von selbst.
@@ -90,5 +96,5 @@ der Weg – erst prüfen, was `nf_world` alles ausführt.
 - Keine Passwörter oder Tokens in `/home/claude/projects/` ablegen.
 - Was Claude liest, geht zur Verarbeitung an Anthropic – keine Kundendaten
   in die Projekte legen.
-- Zugang entziehen: `claude-vps stop <name>`, Deploy-Key bei GitHub löschen,
+- Zugang entziehen: `claude-vps stop`, Deploy-Key bei GitHub löschen,
   in der Claude-App abmelden.

@@ -53,6 +53,7 @@ install -m 644 -o root -g root claude-managed-settings.json /etc/claude-code/man
 
 echo "→ systemd-Vorlage"
 install -m 644 claude-remote@.service /etc/systemd/system/claude-remote@.service
+install -m 644 claude-remote.service /etc/systemd/system/claude-remote.service
 systemctl daemon-reload
 
 echo "→ Befehl claude-vps"
@@ -66,8 +67,8 @@ cat <<EOF
 
   1. claude-vps login
   2. claude-vps add oneworld git@github.com:Naturfactor/oneworld-fund.git
-  3. claude-vps start oneworld
-  4. claude-vps attach oneworld      (einmal Rueckfragen bestaetigen, Ctrl+b d)
+  3. claude-vps start                 (eine Sitzung fuer alle Projekte)
+  4. claude-vps attach                (einmal Rueckfragen bestaetigen, Ctrl+b d)
 
 Danach in der Claude-App (iPhone/Desktop) unter "Code" die Sitzung oeffnen.
 EOF
