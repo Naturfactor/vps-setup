@@ -141,8 +141,24 @@ also auch in `nf`-Sitzungen:
 - 64 Pakete aktualisiert, Neustart: alle Dienste und Container wieder da,
   Claude Remote startete von selbst.
 
-Offen: `/swapfile2` (4 GB, Swap derzeit kaum genutzt), nächtlicher Download
-der OSM-Kartendaten in getasnack (5,9 GB) prüfen.
+- thomasjlhahn-com: unveröffentlichter Commit `37ea570` (Scroll-to-top, CTA)
+  nach GitHub gepusht; Server, GitHub und Klon von `claude` gleichauf. Live-Inhalt
+  stimmt mit `site/` überein (im Live-Ordner nur zusätzliche Alt-Dateien in
+  `fonts/` und `media/`, rsync ohne `--delete`).
+- `.git/` in den Live-Ordnern von nfcosmetics.de und thomasjlhahn.com ist von
+  außen nicht abrufbar (404).
+- Kurzfassung dieser Datei im Vault: `dev/nf-os/Prozesse/claude-arbeitsweise.md`
+  (ohne IP, Schlüssel und Storage-Box-Angaben). Bei Widerspruch gilt diese Datei.
+
+Offen (nicht eilig):
+
+- `/swapfile2` (4 GB) entfernen – Swap derzeit bei 0 %.
+- Prüfen, ob die OSM-Kartendaten in getasnack (5,9 GB) jede Nacht neu geladen
+  werden.
+- getasnack-Nachtlauf: Zahlen in `web/*` selbst committen und pushen lassen
+  (wie `nf-refresh`), damit der Klon von `claude` keine Konflikte bekommt.
+- nataliebonetska: GitHub ist 1 Commit (`4814a0d`) weiter als live – geht beim
+  nächsten Deploy mit, vorher ansehen.
 
 ## Notfall
 
