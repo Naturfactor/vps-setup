@@ -66,11 +66,39 @@ GitHub. Darum:
 
 ## Live schalten (nur root)
 
+Deployt wird immer aus `/root/projects/<projekt>` bzw. dem Live-Ordner –
+die Deploy-Skripte haben diese Pfade fest eingetragen. Aus
+`/home/claude/projects/*` deployt niemand.
+
 | Projekt | Befehl |
 |---|---|
 | oneworld | `cd /root/projects/oneworld && git pull && nf world deploy` |
 | nfcosmetics | `cd /var/www/nfcosmetics && git pull --rebase && nf-refresh` |
-| getasnack, findsbytom, nataliebonetska, thomasjlhahn-com | noch festzuhalten |
+| getasnack | `cd /root/projects/getasnack && git pull --ff-only --autostash && bash pipeline/deploy_web.sh` |
+| findsbytom | `cd /root/projects/findsbytom && git pull --ff-only && scripts/deploy.sh --live && git push` |
+| nataliebonetska | `cd /root/projects/nataliebonetska && git pull --ff-only && bash deploy/deploy.sh` |
+| thomasjlhahn-com | `cd /root/projects/tjlh && git pull --rebase && ./deploy.sh && git push` |
+
+Hinweise:
+
+- **getasnack:** Caddy liefert `/var/www/getasnack/web`; das Skript macht
+  rsync und komprimiert vor, kein Neustart. `--autostash`, weil der Nachtlauf
+  Zahlen in `web/*` ändert, ohne zu committen (die gehen laut Projektregel mit
+  jedem Deploy mit; trifft ein Pull dieselben Dateien, kann es einen Konflikt
+  geben). Nur bei Änderungen in `app/` zusätzlich die Next-App (PM2-Dienst
+  `getasnack`, Port 3006):
+  `cd /root/projects/getasnack/app && npm ci && npm run build && pm2 restart getasnack`
+- **findsbytom:** statisches Astro. Das Skript baut, prüft, legt einen
+  Snapshot an, rsync nach `/var/www/findsbytom`, komprimiert, prüft live und
+  committet – pusht aber nicht, daher `git push` am Schluss.
+- **nataliebonetska:** Next.js als systemd-Dienst `nataliebonetska`
+  (Port 3012). Das Skript pullt selbst, `npm ci`, baut, legt ein Release unter
+  `/opt/nataliebonetska` an, startet den Dienst neu und testet; bei Fehler
+  automatisch zurück auf das vorige Release.
+- **thomasjlhahn-com:** Ordner `/root/projects/tjlh`, rein statisch, rsync von
+  `site/` nach `/var/www/thomasjlhahn`. `site/` ist eingecheckt;
+  `python3 assemble.py` nur, wenn `gen/` geändert wurde, ohne `site/` neu zu
+  bauen.
 
 ## nfcosmetics im Detail
 
