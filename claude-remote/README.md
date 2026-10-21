@@ -52,8 +52,8 @@ Nach einem Neustart des VPS startet alles von selbst.
 
 ## Was Claude darf – und was nicht
 
-- **Darf:** in `/home/claude/` lesen und schreiben, Befehle ausführen, nach
-  Rückfrage committen und auf GitHub pushen (nur in die Repos mit Deploy-Key).
+- **Darf:** in `/home/claude/` lesen und schreiben, Befehle ausführen,
+  committen, nach Rückfrage auf GitHub pushen (nur in die Repos mit Deploy-Key).
 - **Darf nicht:** sudo, `/root/` lesen (also auch nicht `/root/projects/`),
   nach `/etc`, `/usr`, `/var/www` schreiben, die `.env` der Dienste lesen
   (`/opt/oneworld-*` gehören anderen Benutzern).
@@ -70,7 +70,8 @@ Nach einem Neustart des VPS startet alles von selbst.
   sich die Sperrliste umgehen. Claude nutzt dafür seine eigenen Werkzeuge, die
   die Sperrliste beachten.
 - Die Liste liegt root-eigen in `/etc/claude-code/managed-settings.json`;
-  Claude kann sie nicht erweitern. Ändern: Quelle im Repo anpassen,
+  Claude kann sie nicht erweitern. Sie gilt für **alle** Benutzer, also auch
+  für root und die `nf`-Sitzungen. Ändern: Quelle im Repo anpassen,
   `claude-remote/setup.sh` erneut ausführen.
 - **Sperrliste:** `.env`, Schlüssel, `~/.ssh` und `secrets/` sind für das
   Lese-Werkzeug gesperrt. Ein Shell-Befehl wie `cat .env` ist dadurch nicht
